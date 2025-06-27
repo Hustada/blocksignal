@@ -4,6 +4,16 @@ A real-time Bitcoin price monitoring dashboard with custom alerts and live WebSo
 
 ![BlockSignal Dashboard](https://img.shields.io/badge/Next.js-14-black?style=for-the-badge&logo=next.js) ![TypeScript](https://img.shields.io/badge/TypeScript-blue?style=for-the-badge&logo=typescript) ![WebSocket](https://img.shields.io/badge/WebSocket-Live%20Data-green?style=for-the-badge)
 
+## 📸 Preview
+
+<div align="center">
+
+![BlockSignal Dashboard](https://github.com/Hustada/blocksignal/assets/screenshot.png)
+
+*Real-time Bitcoin price monitoring with live WebSocket data, 24h statistics, and custom price alerts*
+
+</div>
+
 ## ✨ Features
 
 - **Real-time Price Updates** - Live WebSocket connection to Coinbase Exchange
