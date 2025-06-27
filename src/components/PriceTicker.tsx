@@ -40,8 +40,8 @@ export function PriceTicker({ productId = 'BTC-USD', onPriceChange }: PriceTicke
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
     }).format(price);
   };
 
@@ -100,7 +100,7 @@ export function PriceTicker({ productId = 'BTC-USD', onPriceChange }: PriceTicke
       </div>
 
       {/* Main Price Display */}
-      <div className={`price-display text-6xl font-bold mb-4 transition-all duration-300 ${getPriceColorClass()} ${
+      <div className={`price-display text-3xl sm:text-4xl lg:text-6xl font-bold mb-4 transition-all duration-300 break-all ${getPriceColorClass()} ${
         priceDirection !== 'neutral' ? 'pulse-price' : ''
       }`}>
         {price !== null ? formatPrice(price) : '--'}
@@ -108,22 +108,22 @@ export function PriceTicker({ productId = 'BTC-USD', onPriceChange }: PriceTicke
 
       {/* 24h Stats */}
       {tickerData && (
-        <div className="grid grid-cols-2 gap-6 text-center">
+        <div className="grid grid-cols-2 gap-3 sm:gap-6 text-center">
           <div className="flex flex-col">
             <span className="text-gray-400 text-sm">24h High</span>
-            <span className="text-white text-lg font-semibold">
+            <span className="text-white text-base sm:text-lg font-semibold">
               {formatPrice(parseFloat(tickerData.high_24h))}
             </span>
           </div>
           <div className="flex flex-col">
             <span className="text-gray-400 text-sm">24h Low</span>
-            <span className="text-white text-lg font-semibold">
+            <span className="text-white text-base sm:text-lg font-semibold">
               {formatPrice(parseFloat(tickerData.low_24h))}
             </span>
           </div>
           <div className="flex flex-col">
             <span className="text-gray-400 text-sm">24h Volume</span>
-            <span className="text-white text-lg font-semibold">
+            <span className="text-white text-base sm:text-lg font-semibold">
               {parseFloat(tickerData.volume_24h).toLocaleString()} BTC
             </span>
           </div>
@@ -134,7 +134,7 @@ export function PriceTicker({ productId = 'BTC-USD', onPriceChange }: PriceTicke
               const current = parseFloat(tickerData.price);
               const change = formatChange(current, open);
               return (
-                <span className={`text-lg font-semibold ${
+                <span className={`text-base sm:text-lg font-semibold ${
                   change.isPositive ? 'text-green-400' : 'text-red-400'
                 }`}>
                   {change.dollar} ({change.percent})
