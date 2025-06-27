@@ -77,12 +77,6 @@ export default function Dashboard() {
           <p className="text-gray-500 text-sm">
             Built for continuous monitoring • Data from Coinbase Exchange
           </p>
-          <div className="mt-4 flex justify-center gap-6 text-xs text-gray-600">
-            <span>WebSocket Connection</span>
-            <span>Real-time Updates</span>
-            <span>Desktop Notifications</span>
-            <span>Auto-reconnect</span>
-          </div>
         </div>
       </div>
 
