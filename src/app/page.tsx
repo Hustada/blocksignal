@@ -54,12 +54,6 @@ export default function Dashboard() {
             Real-time Bitcoin price monitoring with custom alerts
           </p>
         </div>
-        
-        {lastUpdate && (
-          <div className="text-center text-sm text-gray-500">
-            Last update: {lastUpdate.toLocaleTimeString()}
-          </div>
-        )}
       </div>
 
       {/* Main Content */}
