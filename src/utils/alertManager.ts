@@ -11,6 +11,7 @@ export interface PriceAlert {
   triggerCount: number;
   resetThreshold?: number; // Custom reset distance from threshold
   snoozedUntil?: Date; // For snooze functionality
+  productId: string; // Which crypto this alert is for
 }
 
 export interface AlertManagerConfig {
@@ -136,12 +137,15 @@ class AlertManager {
     }
   }
 
-  checkAlerts(currentPrice: number): PriceAlert[] {
+  checkAlerts(currentPrice: number, productId?: string): PriceAlert[] {
     const triggeredAlerts: PriceAlert[] = [];
     const now = new Date();
 
     for (const alert of this.alerts) {
       if (!alert.enabled) continue;
+      
+      // Skip alerts for different products if productId is specified
+      if (productId && alert.productId !== productId) continue;
       
       // Check if alert is snoozed
       if (alert.snoozedUntil && now < alert.snoozedUntil) continue;
@@ -205,8 +209,9 @@ class AlertManager {
     const triggerText = alert.triggerCount > 1 ? ` (${alert.triggerCount}${this.getOrdinalSuffix(alert.triggerCount)} trigger)` : '';
     const autoResetText = alert.autoReset ? ' 🔄' : '';
     
-    const message = `${alert.name}${triggerText}: BTC is ${alert.type} $${alert.threshold.toLocaleString()}!\nCurrent: $${currentPrice.toLocaleString()} ${trend} (${priceChangeNum >= 0 ? '+' : ''}${priceChange}%)\n\n💡 Click to view dashboard ${alert.autoReset ? '• Snooze available' : ''}`;
-    const shortMessage = `${alert.name}${autoResetText}: BTC ${alert.type} $${alert.threshold.toLocaleString()}`;
+    const cryptoSymbol = alert.productId ? alert.productId.split('-')[0] : 'BTC';
+    const message = `${alert.name}${triggerText}: ${cryptoSymbol} is ${alert.type} $${alert.threshold.toLocaleString()}!\nCurrent: $${currentPrice.toLocaleString()} ${trend} (${priceChangeNum >= 0 ? '+' : ''}${priceChange}%)\n\n💡 Click to view dashboard ${alert.autoReset ? '• Snooze available' : ''}`;
+    const shortMessage = `${alert.name}${autoResetText}: ${cryptoSymbol} ${alert.type} $${alert.threshold.toLocaleString()}`;
     
     // Start title flashing for background tabs
     if (!this.isTabVisible && this.config.enableTitleFlashing) {
@@ -492,6 +497,7 @@ class AlertManager {
           autoReset: alert.autoReset || false,
           triggerCount: alert.triggerCount || 0,
           resetThreshold: alert.resetThreshold,
+          productId: alert.productId || 'BTC-USD', // Default to BTC for old alerts
         }));
       }
 

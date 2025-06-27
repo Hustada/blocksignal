@@ -3,15 +3,23 @@
 import { useState, useEffect, useCallback } from 'react';
 import { PriceTicker } from '@/components/PriceTicker';
 import { AlertBar } from '@/components/AlertBar';
+import { CryptoSelector, CryptoOption, SUPPORTED_CRYPTOS } from '@/components/CryptoSelector';
 import { logger, wsLogger, perfLogger } from '@/utils/logger';
 
 export default function Dashboard() {
   const [currentPrice, setCurrentPrice] = useState<number | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [notificationPermission, setNotificationPermission] = useState<string>('unknown');
+  const [selectedCrypto, setSelectedCrypto] = useState<string>('BTC-USD');
 
   useEffect(() => {
     logger.info('Dashboard mounted', 'Dashboard');
+    
+    // Load saved crypto preference
+    const savedCrypto = localStorage.getItem('selectedCrypto');
+    if (savedCrypto && SUPPORTED_CRYPTOS.some(c => c.id === savedCrypto)) {
+      setSelectedCrypto(savedCrypto);
+    }
     
     // Set notification permission state
     if (typeof window !== 'undefined' && 'Notification' in window) {
@@ -42,16 +50,31 @@ export default function Dashboard() {
     measurePerf();
   }, []);
 
+  const handleCryptoChange = useCallback((crypto: CryptoOption) => {
+    logger.info(`Switching to ${crypto.symbol}`, 'Dashboard');
+    setSelectedCrypto(crypto.id);
+    setCurrentPrice(null); // Reset price when switching
+    localStorage.setItem('selectedCrypto', crypto.id);
+  }, []);
+
   return (
     <div className="min-h-screen p-4 md:p-8">
       {/* Header */}
       <div className="max-w-7xl mx-auto mb-8">
-        <div className="text-center mb-2">
-          <h1 className="text-4xl md:text-6xl font-bold text-white mb-2">
-            Block<span className="text-burnt">Signal</span>
-          </h1>
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4">
+          <div className="flex items-center gap-4">
+            <h1 className="text-3xl md:text-5xl font-bold text-white">
+              Block<span className="text-burnt">Signal</span>
+            </h1>
+            <CryptoSelector 
+              selectedCrypto={selectedCrypto}
+              onCryptoChange={handleCryptoChange}
+            />
+          </div>
+        </div>
+        <div className="text-center">
           <p className="text-gray-400 text-lg">
-            Real-time Bitcoin price monitoring with custom alerts
+            Real-time cryptocurrency price monitoring with custom alerts
           </p>
         </div>
       </div>
@@ -61,12 +84,18 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
           {/* Price Ticker - Takes up more space on larger screens */}
           <div className="xl:col-span-2">
-            <PriceTicker onPriceChange={handlePriceChange} />
+            <PriceTicker 
+              productId={selectedCrypto}
+              onPriceChange={handlePriceChange} 
+            />
           </div>
           
           {/* Alert Bar */}
           <div className="xl:col-span-1">
-            <AlertBar currentPrice={currentPrice} />
+            <AlertBar 
+              currentPrice={currentPrice} 
+              selectedCrypto={selectedCrypto}
+            />
           </div>
         </div>
       </div>

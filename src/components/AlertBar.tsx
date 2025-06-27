@@ -3,12 +3,14 @@
 import { useState, useEffect } from 'react';
 import { useAlertManager, PriceAlert } from '@/utils/alertManager';
 import { alertLogger } from '@/utils/logger';
+import { SUPPORTED_CRYPTOS } from './CryptoSelector';
 
 interface AlertBarProps {
   currentPrice: number | null;
+  selectedCrypto: string;
 }
 
-export function AlertBar({ currentPrice }: AlertBarProps) {
+export function AlertBar({ currentPrice, selectedCrypto }: AlertBarProps) {
   const alertManager = useAlertManager();
   const [alerts, setAlerts] = useState<PriceAlert[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -19,17 +21,22 @@ export function AlertBar({ currentPrice }: AlertBarProps) {
   const [newAlertResetThreshold, setNewAlertResetThreshold] = useState('');
 
   useEffect(() => {
-    setAlerts(alertManager.getAlerts());
-  }, []);
+    // Filter alerts for the selected crypto
+    const allAlerts = alertManager.getAlerts();
+    const cryptoAlerts = allAlerts.filter(alert => alert.productId === selectedCrypto);
+    setAlerts(cryptoAlerts);
+  }, [selectedCrypto]);
 
   useEffect(() => {
     if (currentPrice !== null) {
-      const triggeredAlerts = alertManager.checkAlerts(currentPrice);
+      const triggeredAlerts = alertManager.checkAlerts(currentPrice, selectedCrypto);
       if (triggeredAlerts.length > 0) {
-        setAlerts(alertManager.getAlerts());
+        const allAlerts = alertManager.getAlerts();
+        const cryptoAlerts = allAlerts.filter(alert => alert.productId === selectedCrypto);
+        setAlerts(cryptoAlerts);
       }
     }
-  }, [currentPrice]);
+  }, [currentPrice, selectedCrypto]);
 
   const handleAddAlert = () => {
     if (!newAlertName.trim() || !newAlertThreshold) return;
@@ -52,6 +59,7 @@ export function AlertBar({ currentPrice }: AlertBarProps) {
       enabled: true,
       autoReset: newAlertAutoReset,
       resetThreshold,
+      productId: selectedCrypto,
     });
 
     alertLogger.created({
@@ -61,7 +69,9 @@ export function AlertBar({ currentPrice }: AlertBarProps) {
       threshold,
     });
 
-    setAlerts(alertManager.getAlerts());
+    const allAlerts = alertManager.getAlerts();
+    const cryptoAlerts = allAlerts.filter(alert => alert.productId === selectedCrypto);
+    setAlerts(cryptoAlerts);
     setNewAlertName('');
     setNewAlertThreshold('');
     setNewAlertAutoReset(false);
@@ -72,7 +82,9 @@ export function AlertBar({ currentPrice }: AlertBarProps) {
   const handleRemoveAlert = (id: string) => {
     alertManager.removeAlert(id);
     alertLogger.removed(id);
-    setAlerts(alertManager.getAlerts());
+    const allAlerts = alertManager.getAlerts();
+    const cryptoAlerts = allAlerts.filter(alert => alert.productId === selectedCrypto);
+    setAlerts(cryptoAlerts);
   };
 
   const handleToggleAlert = (id: string) => {
@@ -80,23 +92,31 @@ export function AlertBar({ currentPrice }: AlertBarProps) {
     if (alert) {
       alertManager.toggleAlert(id);
       alertLogger.toggled(id, !alert.enabled);
-      setAlerts(alertManager.getAlerts());
+      const allAlerts = alertManager.getAlerts();
+    const cryptoAlerts = allAlerts.filter(alert => alert.productId === selectedCrypto);
+    setAlerts(cryptoAlerts);
     }
   };
 
   const handleSnoozeAlert = (id: string) => {
     alertManager.snoozeAlert(id, 5); // Snooze for 5 minutes
-    setAlerts(alertManager.getAlerts());
+    const allAlerts = alertManager.getAlerts();
+    const cryptoAlerts = allAlerts.filter(alert => alert.productId === selectedCrypto);
+    setAlerts(cryptoAlerts);
   };
 
   const handleUnsnoozeAlert = (id: string) => {
     alertManager.unsnoozeAlert(id);
-    setAlerts(alertManager.getAlerts());
+    const allAlerts = alertManager.getAlerts();
+    const cryptoAlerts = allAlerts.filter(alert => alert.productId === selectedCrypto);
+    setAlerts(cryptoAlerts);
   };
 
   const handleResetTriggered = () => {
     alertManager.resetTriggeredAlerts();
-    setAlerts(alertManager.getAlerts());
+    const allAlerts = alertManager.getAlerts();
+    const cryptoAlerts = allAlerts.filter(alert => alert.productId === selectedCrypto);
+    setAlerts(cryptoAlerts);
   };
 
   const formatThreshold = (threshold: number) => {
@@ -255,7 +275,7 @@ export function AlertBar({ currentPrice }: AlertBarProps) {
                       {!alert.autoReset && <span className="text-xs text-gray-500">🔒</span>}
                     </div>
                     <div className="text-sm text-gray-400 mb-2">
-                      When BTC goes {alert.type} {formatThreshold(alert.threshold)}
+                      When {SUPPORTED_CRYPTOS.find(c => c.id === selectedCrypto)?.symbol || 'BTC'} goes {alert.type} {formatThreshold(alert.threshold)}
                       {alert.autoReset && (
                         <span className="text-blue-400 ml-1">(auto-reset)</span>
                       )}
@@ -340,7 +360,7 @@ export function AlertBar({ currentPrice }: AlertBarProps) {
       {currentPrice !== null && (
         <div className="mt-4 pt-4 border-t border-gray-700">
           <div className="text-center text-sm text-gray-400">
-            Current BTC Price: <span className="text-white font-semibold">{formatThreshold(currentPrice)}</span>
+            Current {SUPPORTED_CRYPTOS.find(c => c.id === selectedCrypto)?.symbol || 'BTC'} Price: <span className="text-white font-semibold">{formatThreshold(currentPrice)}</span>
           </div>
         </div>
       )}

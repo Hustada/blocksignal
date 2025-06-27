@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useCoinbaseTicker } from '@/hooks/useCoinbaseTicker';
+import { SUPPORTED_CRYPTOS } from './CryptoSelector';
 
 interface PriceTickerProps {
   productId?: string;
@@ -36,12 +37,16 @@ export function PriceTicker({ productId = 'BTC-USD', onPriceChange }: PriceTicke
     }
   }, [price, previousPrice, onPriceChange]);
 
-  const formatPrice = (price: number) => {
+  const formatPrice = (price: number, forceDecimals?: boolean) => {
+    // Get decimal places for current crypto
+    const crypto = SUPPORTED_CRYPTOS.find(c => c.id === productId);
+    const decimals = forceDecimals ? 2 : (crypto?.decimals ?? 2);
+    
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
     }).format(price);
   };
 
@@ -49,7 +54,7 @@ export function PriceTicker({ productId = 'BTC-USD', onPriceChange }: PriceTicke
     const change = current - open;
     const changePercent = ((change / open) * 100);
     return {
-      dollar: change >= 0 ? `+$${change.toFixed(2)}` : `-$${Math.abs(change).toFixed(2)}`,
+      dollar: change >= 0 ? `+$${Math.abs(change).toFixed(2)}` : `-$${Math.abs(change).toFixed(2)}`,
       percent: change >= 0 ? `+${changePercent.toFixed(2)}%` : `${changePercent.toFixed(2)}%`,
       isPositive: change >= 0,
     };
@@ -124,7 +129,7 @@ export function PriceTicker({ productId = 'BTC-USD', onPriceChange }: PriceTicke
           <div className="flex flex-col">
             <span className="text-gray-400 text-sm">24h Volume</span>
             <span className="text-white text-base sm:text-lg font-semibold">
-              {parseFloat(tickerData.volume_24h).toLocaleString()} BTC
+              {parseFloat(tickerData.volume_24h).toLocaleString()} {SUPPORTED_CRYPTOS.find(c => c.id === productId)?.symbol || 'BTC'}
             </span>
           </div>
           <div className="flex flex-col">

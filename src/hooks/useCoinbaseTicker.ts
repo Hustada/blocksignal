@@ -301,6 +301,12 @@ export function useCoinbaseTicker(productId: string = 'BTC-USD'): CoinbaseTicker
   useEffect(() => {
     console.log('🚀 useCoinbaseTicker useEffect starting for productId:', productId);
     
+    // Reset state when product changes
+    setPrice(null);
+    setTickerData(null);
+    setError(null);
+    reconnectAttemptsRef.current = 0;
+    
     // Start with reliable REST API for immediate data
     console.log('Starting with REST API for reliable data');
     startFallback();
@@ -326,7 +332,7 @@ export function useCoinbaseTicker(productId: string = 'BTC-USD'): CoinbaseTicker
       // Close WebSocket connection
       if (wsRef.current && wsRef.current.readyState !== WebSocket.CLOSED) {
         console.log('🔴 Closing WebSocket due to cleanup');
-        wsRef.current.close(1000, 'Component unmounting');
+        wsRef.current.close(1000, 'Product changed or unmounting');
         wsRef.current = null;
       }
       
