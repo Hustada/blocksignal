@@ -8,7 +8,8 @@ A real-time Bitcoin price monitoring dashboard with custom alerts and live WebSo
 
 <div align="center">
 
-![BlockSignal Dashboard Screenshot](./public/Screenshot%202025-06-27%20at%2011.57.51%20AM.png)
+![Screenshot 2025-06-27 at 12 00 26 PM](https://github.com/user-attachments/assets/f70c85a6-3322-4c45-b2ee-5f4b792bcf1d)
+
 
 *Real-time Bitcoin price monitoring with live WebSocket data, 24h statistics, and custom price alerts*
 
