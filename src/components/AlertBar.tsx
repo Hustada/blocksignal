@@ -15,6 +15,8 @@ export function AlertBar({ currentPrice }: AlertBarProps) {
   const [newAlertName, setNewAlertName] = useState('');
   const [newAlertType, setNewAlertType] = useState<'above' | 'below'>('above');
   const [newAlertThreshold, setNewAlertThreshold] = useState('');
+  const [newAlertAutoReset, setNewAlertAutoReset] = useState(false);
+  const [newAlertResetThreshold, setNewAlertResetThreshold] = useState('');
 
   useEffect(() => {
     setAlerts(alertManager.getAlerts());
@@ -35,11 +37,21 @@ export function AlertBar({ currentPrice }: AlertBarProps) {
     const threshold = parseFloat(newAlertThreshold);
     if (isNaN(threshold) || threshold <= 0) return;
 
+    let resetThreshold: number | undefined;
+    if (newAlertAutoReset && newAlertResetThreshold) {
+      resetThreshold = parseFloat(newAlertResetThreshold);
+      if (isNaN(resetThreshold) || resetThreshold < 0) {
+        resetThreshold = undefined; // Use default if invalid
+      }
+    }
+
     const alertId = alertManager.addAlert({
       name: newAlertName.trim(),
       type: newAlertType,
       threshold,
       enabled: true,
+      autoReset: newAlertAutoReset,
+      resetThreshold,
     });
 
     alertLogger.created({
@@ -52,6 +64,8 @@ export function AlertBar({ currentPrice }: AlertBarProps) {
     setAlerts(alertManager.getAlerts());
     setNewAlertName('');
     setNewAlertThreshold('');
+    setNewAlertAutoReset(false);
+    setNewAlertResetThreshold('');
     setShowForm(false);
   };
 
@@ -68,6 +82,11 @@ export function AlertBar({ currentPrice }: AlertBarProps) {
       alertLogger.toggled(id, !alert.enabled);
       setAlerts(alertManager.getAlerts());
     }
+  };
+
+  const handleSnoozeAlert = (id: string) => {
+    alertManager.snoozeAlert(id, 5); // Snooze for 5 minutes
+    setAlerts(alertManager.getAlerts());
   };
 
   const handleResetTriggered = () => {
@@ -121,7 +140,7 @@ export function AlertBar({ currentPrice }: AlertBarProps) {
       {/* Add Alert Form */}
       {showForm && (
         <div className="mb-6 p-4 bg-gray-800 rounded border border-gray-700">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
             <div>
               <label className="block text-sm text-gray-300 mb-1">Alert Name</label>
               <input
@@ -159,9 +178,42 @@ export function AlertBar({ currentPrice }: AlertBarProps) {
                 disabled={!newAlertName.trim() || !newAlertThreshold}
                 className="w-full px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded transition-colors"
               >
-                Add
+                Add Alert
               </button>
             </div>
+          </div>
+          
+          {/* Auto-reset options */}
+          <div className="border-t border-gray-700 pt-4">
+            <div className="flex items-center gap-4 mb-3">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={newAlertAutoReset}
+                  onChange={(e) => setNewAlertAutoReset(e.target.checked)}
+                  className="w-4 h-4 text-burnt bg-gray-900 border-gray-600 rounded focus:ring-burnt focus:ring-2"
+                />
+                <span className="text-sm text-gray-300">🔄 Auto-reset alert (can trigger multiple times)</span>
+              </label>
+            </div>
+            
+            {newAlertAutoReset && (
+              <div className="ml-6">
+                <label className="block text-xs text-gray-400 mb-1">
+                  Reset Distance ($) - Optional (default: 1% of threshold)
+                </label>
+                <input
+                  type="number"
+                  value={newAlertResetThreshold}
+                  onChange={(e) => setNewAlertResetThreshold(e.target.value)}
+                  placeholder="Auto (1% of threshold)"
+                  className="w-48 px-2 py-1 text-sm bg-gray-900 border border-gray-600 rounded text-white focus:border-burnt focus:outline-none"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  How far price must move away to reset the alert
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -189,22 +241,50 @@ export function AlertBar({ currentPrice }: AlertBarProps) {
                   alert.triggered ? 'bg-red-400' : alert.enabled ? 'bg-green-400' : 'bg-gray-500'
                 }`} />
                 <div>
-                  <div className="text-white font-medium">{alert.name}</div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-white font-medium">{alert.name}</span>
+                    {alert.autoReset && <span className="text-xs text-blue-400">🔄</span>}
+                    {!alert.autoReset && <span className="text-xs text-gray-500">🔒</span>}
+                  </div>
                   <div className="text-sm text-gray-400">
                     When BTC goes {alert.type} {formatThreshold(alert.threshold)}
+                    {alert.autoReset && (
+                      <span className="text-blue-400 ml-1">(auto-reset)</span>
+                    )}
                   </div>
-                  {alert.lastTriggered && (
-                    <div className="text-xs text-gray-500">
-                      Last triggered: {alert.lastTriggered.toLocaleString()}
-                    </div>
-                  )}
+                  <div className="flex items-center gap-3 text-xs text-gray-500">
+                    {alert.triggerCount > 0 && (
+                      <span>
+                        Triggered {alert.triggerCount} time{alert.triggerCount !== 1 ? 's' : ''}
+                      </span>
+                    )}
+                    {alert.lastTriggered && (
+                      <span>
+                        Last: {alert.lastTriggered.toLocaleString()}
+                      </span>
+                    )}
+                    {alert.snoozedUntil && new Date() < alert.snoozedUntil && (
+                      <span className="text-yellow-400">
+                        😴 Snoozed until {alert.snoozedUntil.toLocaleTimeString()}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
               
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 <span className={`text-sm font-medium ${getAlertStatusColor(alert)}`}>
                   {getAlertStatusText(alert)}
                 </span>
+                {alert.enabled && !(alert.snoozedUntil && new Date() < alert.snoozedUntil) && (
+                  <button
+                    onClick={() => handleSnoozeAlert(alert.id)}
+                    className="px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
+                    title="Snooze for 5 minutes"
+                  >
+                    😴 5min
+                  </button>
+                )}
                 <button
                   onClick={() => handleToggleAlert(alert.id)}
                   className={`px-3 py-1 text-sm rounded transition-colors ${

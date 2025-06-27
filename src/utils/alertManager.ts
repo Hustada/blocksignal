@@ -7,6 +7,10 @@ export interface PriceAlert {
   triggered: boolean;
   createdAt: Date;
   lastTriggered?: Date;
+  autoReset: boolean;
+  triggerCount: number;
+  resetThreshold?: number; // Custom reset distance from threshold
+  snoozedUntil?: Date; // For snooze functionality
 }
 
 export interface AlertManagerConfig {
@@ -17,6 +21,10 @@ export interface AlertManagerConfig {
   enableTitleFlashing?: boolean;
   enableFaviconAlerts?: boolean;
   persistentNotifications?: boolean;
+  enableRichNotifications?: boolean;
+  enableNotificationActions?: boolean;
+  defaultSnoozeMinutes?: number;
+  maxNotificationsPerHour?: number;
 }
 
 class AlertManager {
@@ -28,6 +36,10 @@ class AlertManager {
     enableTitleFlashing: true,
     enableFaviconAlerts: true,
     persistentNotifications: true,
+    enableRichNotifications: true,
+    enableNotificationActions: true,
+    defaultSnoozeMinutes: 5,
+    maxNotificationsPerHour: 20,
   };
   private notificationPermission: NotificationPermission = 'default';
   private audioContext?: AudioContext;
@@ -35,6 +47,8 @@ class AlertManager {
   private originalTitle: string = '';
   private titleFlashInterval?: NodeJS.Timeout;
   private currentFavicon: string = '/favicon.ico';
+  private notificationCount: number = 0;
+  private notificationHistory: Date[] = [];
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -77,12 +91,16 @@ class AlertManager {
     });
   }
 
-  addAlert(alert: Omit<PriceAlert, 'id' | 'createdAt' | 'triggered'>): string {
+  addAlert(alert: Omit<PriceAlert, 'id' | 'createdAt' | 'triggered' | 'triggerCount'>): string {
     const newAlert: PriceAlert = {
       ...alert,
       id: crypto.randomUUID(),
       createdAt: new Date(),
       triggered: false,
+      triggerCount: 0,
+      autoReset: alert.autoReset || false,
+      resetThreshold: alert.resetThreshold,
+      snoozedUntil: alert.snoozedUntil,
     };
     
     this.alerts.push(newAlert);
@@ -120,20 +138,47 @@ class AlertManager {
 
   checkAlerts(currentPrice: number): PriceAlert[] {
     const triggeredAlerts: PriceAlert[] = [];
+    const now = new Date();
 
     for (const alert of this.alerts) {
-      if (!alert.enabled || alert.triggered) continue;
+      if (!alert.enabled) continue;
+      
+      // Check if alert is snoozed
+      if (alert.snoozedUntil && now < alert.snoozedUntil) continue;
 
-      const shouldTrigger = 
-        (alert.type === 'above' && currentPrice >= alert.threshold) ||
-        (alert.type === 'below' && currentPrice <= alert.threshold);
+      // Auto-reset logic for triggered alerts
+      if (alert.triggered && alert.autoReset) {
+        const resetDistance = alert.resetThreshold || (alert.threshold * 0.01); // Default 1% reset distance
+        let shouldReset = false;
 
-      if (shouldTrigger) {
-        alert.triggered = true;
-        alert.lastTriggered = new Date();
-        triggeredAlerts.push(alert);
-        
-        this.triggerAlert(alert, currentPrice);
+        if (alert.type === 'above') {
+          // Reset when price drops below threshold - reset distance
+          shouldReset = currentPrice <= (alert.threshold - resetDistance);
+        } else {
+          // Reset when price rises above threshold + reset distance  
+          shouldReset = currentPrice >= (alert.threshold + resetDistance);
+        }
+
+        if (shouldReset) {
+          alert.triggered = false;
+          console.log(`🔄 Auto-reset: ${alert.name} at price ${currentPrice}`);
+        }
+      }
+
+      // Check for new triggers
+      if (!alert.triggered) {
+        const shouldTrigger = 
+          (alert.type === 'above' && currentPrice >= alert.threshold) ||
+          (alert.type === 'below' && currentPrice <= alert.threshold);
+
+        if (shouldTrigger) {
+          alert.triggered = true;
+          alert.lastTriggered = new Date();
+          alert.triggerCount++;
+          triggeredAlerts.push(alert);
+          
+          this.triggerAlert(alert, currentPrice);
+        }
       }
     }
 
@@ -148,29 +193,65 @@ class AlertManager {
   }
 
   private triggerAlert(alert: PriceAlert, currentPrice: number): void {
-    const message = `${alert.name}: BTC is ${alert.type} $${alert.threshold.toLocaleString()}! Current price: $${currentPrice.toLocaleString()}`;
-    const shortMessage = `${alert.name}: BTC ${alert.type} $${alert.threshold.toLocaleString()}`;
+    // Check notification rate limiting
+    if (!this.canSendNotification()) {
+      console.log('🚫 Notification rate limited');
+      return;
+    }
+
+    const priceChangeNum = ((currentPrice - alert.threshold) / alert.threshold * 100);
+    const priceChange = priceChangeNum.toFixed(2);
+    const trend = currentPrice >= alert.threshold ? '↗️' : '↘️';
+    const triggerText = alert.triggerCount > 1 ? ` (${alert.triggerCount}${this.getOrdinalSuffix(alert.triggerCount)} trigger)` : '';
+    const autoResetText = alert.autoReset ? ' 🔄' : '';
+    
+    const message = `${alert.name}${triggerText}: BTC is ${alert.type} $${alert.threshold.toLocaleString()}!\nCurrent: $${currentPrice.toLocaleString()} ${trend} (${priceChangeNum >= 0 ? '+' : ''}${priceChange}%)`;
+    const shortMessage = `${alert.name}${autoResetText}: BTC ${alert.type} $${alert.threshold.toLocaleString()}`;
     
     // Start title flashing for background tabs
     if (!this.isTabVisible && this.config.enableTitleFlashing) {
       this.startTitleFlashing(shortMessage);
     }
     
-    // Enhanced desktop notification
+    // Rich desktop notification with actions
     if (typeof window !== 'undefined' && this.config.enableNotifications && this.notificationPermission === 'granted') {
-      const notification = new Notification('🚨 BlockSignal Alert', {
+      const notificationOptions: NotificationOptions = {
         body: message,
-        icon: '/favicon.ico',
-        badge: '/favicon.ico',
-        tag: alert.id,
-        requireInteraction: this.config.persistentNotifications && !this.isTabVisible, // Persistent when tab is hidden
-      });
+        icon: '/notification-icon.svg',
+        badge: '/notification-badge.svg',
+        tag: alert.triggerCount > 1 ? `${alert.id}-${alert.triggerCount}` : alert.id, // Unique tag for repeat triggers
+        requireInteraction: this.config.persistentNotifications && !this.isTabVisible,
+      };
+
+      // Add action buttons if supported and enabled
+      if (this.config.enableNotificationActions && 'actions' in Notification.prototype) {
+        (notificationOptions as any).actions = [
+          { action: 'view', title: '📊 View Dashboard', icon: '/notification-icon.svg' },
+          { action: 'snooze', title: `⏰ Snooze ${this.config.defaultSnoozeMinutes}min`, icon: '/notification-badge.svg' },
+        ];
+        
+        if (!alert.autoReset) {
+          (notificationOptions as any).actions.push({ action: 'disable', title: '🔕 Disable Alert', icon: '/notification-badge.svg' });
+        }
+      }
+
+      const notification = new Notification('🚨 BlockSignal Alert', notificationOptions);
       
-      // Click notification to focus tab
+      // Handle notification interactions
       notification.onclick = () => {
-        window.focus();
+        this.handleNotificationAction('view', alert.id);
         notification.close();
       };
+
+      // Handle action button clicks (if supported)
+      if ('addEventListener' in notification) {
+        notification.addEventListener('notificationclick', (event: any) => {
+          this.handleNotificationAction(event.action || 'view', alert.id);
+          notification.close();
+        });
+      }
+      
+      this.trackNotification();
     }
 
     // Sound notification (enhanced for background)
@@ -184,7 +265,7 @@ class AlertManager {
     }
 
     // Console log for debugging
-    console.log(`🚨 Alert triggered: ${message} | Tab visible: ${this.isTabVisible}`);
+    console.log(`🚨 Alert triggered: ${alert.name} | Count: ${alert.triggerCount} | Auto-reset: ${alert.autoReset} | Tab visible: ${this.isTabVisible}`);
   }
 
   private playAlertSound(): void {
@@ -350,6 +431,64 @@ class AlertManager {
     };
   }
 
+  // Snooze functionality
+  snoozeAlert(alertId: string, minutes?: number): void {
+    const alert = this.alerts.find(a => a.id === alertId);
+    if (alert) {
+      const snoozeMinutes = minutes || this.config.defaultSnoozeMinutes || 5;
+      alert.snoozedUntil = new Date(Date.now() + snoozeMinutes * 60 * 1000);
+      this.saveAlertsToStorage();
+      console.log(`😴 Snoozed ${alert.name} for ${snoozeMinutes} minutes`);
+    }
+  }
+
+  // Notification rate limiting
+  private canSendNotification(): boolean {
+    const now = new Date();
+    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+    
+    // Clean old notifications from history
+    this.notificationHistory = this.notificationHistory.filter(date => date > oneHourAgo);
+    
+    return this.notificationHistory.length < (this.config.maxNotificationsPerHour || 20);
+  }
+
+  private trackNotification(): void {
+    this.notificationHistory.push(new Date());
+  }
+
+  // Helper for ordinal numbers (1st, 2nd, 3rd, etc.)
+  private getOrdinalSuffix(num: number): string {
+    const j = num % 10;
+    const k = num % 100;
+    if (j === 1 && k !== 11) return 'st';
+    if (j === 2 && k !== 12) return 'nd';
+    if (j === 3 && k !== 13) return 'rd';
+    return 'th';
+  }
+
+  // Handle notification action clicks
+  private handleNotificationAction(action: string, alertId: string): void {
+    switch (action) {
+      case 'view':
+        if (typeof window !== 'undefined') {
+          window.focus();
+        }
+        break;
+      case 'snooze':
+        this.snoozeAlert(alertId);
+        break;
+      case 'disable':
+        const alert = this.alerts.find(a => a.id === alertId);
+        if (alert) {
+          alert.enabled = false;
+          this.saveAlertsToStorage();
+          console.log(`🔕 Disabled alert: ${alert.name}`);
+        }
+        break;
+    }
+  }
+
   private saveAlertsToStorage(): void {
     if (typeof window === 'undefined') return;
     
@@ -371,6 +510,11 @@ class AlertManager {
           ...alert,
           createdAt: new Date(alert.createdAt),
           lastTriggered: alert.lastTriggered ? new Date(alert.lastTriggered) : undefined,
+          snoozedUntil: alert.snoozedUntil ? new Date(alert.snoozedUntil) : undefined,
+          // Provide defaults for new fields for backward compatibility
+          autoReset: alert.autoReset || false,
+          triggerCount: alert.triggerCount || 0,
+          resetThreshold: alert.resetThreshold,
         }));
       }
 
