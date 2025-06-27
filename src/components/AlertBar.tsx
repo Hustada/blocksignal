@@ -145,7 +145,7 @@ export function AlertBar({ currentPrice }: AlertBarProps) {
       {/* Add Alert Form */}
       {showForm && (
         <div className="mb-6 p-4 bg-gray-800 rounded border border-gray-700">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
             <div>
               <label className="block text-sm text-gray-300 mb-1">Alert Name</label>
               <input
@@ -177,11 +177,11 @@ export function AlertBar({ currentPrice }: AlertBarProps) {
                 className="w-full px-3 py-2 bg-gray-900 border border-gray-600 rounded text-white focus:border-burnt focus:outline-none"
               />
             </div>
-            <div className="flex items-end">
+            <div className="sm:col-span-2 lg:col-span-1 flex items-end">
               <button
                 onClick={handleAddAlert}
                 disabled={!newAlertName.trim() || !newAlertThreshold}
-                className="w-full px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded transition-colors"
+                className="w-full px-4 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded transition-colors text-base font-medium"
               >
                 Add Alert
               </button>
@@ -229,11 +229,11 @@ export function AlertBar({ currentPrice }: AlertBarProps) {
           No alerts configured. Click "Add Alert" to get started.
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {alerts.map((alert) => (
             <div
               key={alert.id}
-              className={`flex items-center justify-between p-4 rounded border ${
+              className={`p-4 rounded border ${
                 alert.triggered 
                   ? 'bg-red-900/20 border-red-500/30' 
                   : alert.enabled 
@@ -241,83 +241,95 @@ export function AlertBar({ currentPrice }: AlertBarProps) {
                     : 'bg-gray-900 border-gray-800'
               }`}
             >
-              <div className="flex items-center gap-4">
-                <div className={`w-3 h-3 rounded-full ${
-                  alert.triggered ? 'bg-red-400' : alert.enabled ? 'bg-green-400' : 'bg-gray-500'
-                }`} />
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-white font-medium">{alert.name}</span>
-                    {alert.autoReset && <span className="text-xs text-blue-400">🔄</span>}
-                    {!alert.autoReset && <span className="text-xs text-gray-500">🔒</span>}
-                  </div>
-                  <div className="text-sm text-gray-400">
-                    When BTC goes {alert.type} {formatThreshold(alert.threshold)}
-                    {alert.autoReset && (
-                      <span className="text-blue-400 ml-1">(auto-reset)</span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-3 text-xs text-gray-500">
-                    {alert.triggerCount > 0 && (
-                      <span>
-                        Triggered {alert.triggerCount} time{alert.triggerCount !== 1 ? 's' : ''}
-                      </span>
-                    )}
-                    {alert.lastTriggered && (
-                      <span>
-                        Last: {alert.lastTriggered.toLocaleString()}
-                      </span>
-                    )}
-                    {alert.snoozedUntil && new Date() < alert.snoozedUntil && (
-                      <span className="text-yellow-400">
-                        😴 Snoozed until {alert.snoozedUntil.toLocaleTimeString()}
-                      </span>
-                    )}
+              {/* Mobile-first: Stack content vertically, horizontal on larger screens */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                {/* Alert Content Area */}
+                <div className="flex items-start gap-3 flex-1 min-w-0">
+                  <div className={`w-3 h-3 rounded-full mt-1 flex-shrink-0 ${
+                    alert.triggered ? 'bg-red-400' : alert.enabled ? 'bg-green-400' : 'bg-gray-500'
+                  }`} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-white font-medium text-base">{alert.name}</span>
+                      {alert.autoReset && <span className="text-xs text-blue-400">🔄</span>}
+                      {!alert.autoReset && <span className="text-xs text-gray-500">🔒</span>}
+                    </div>
+                    <div className="text-sm text-gray-400 mb-2">
+                      When BTC goes {alert.type} {formatThreshold(alert.threshold)}
+                      {alert.autoReset && (
+                        <span className="text-blue-400 ml-1">(auto-reset)</span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
+                      {alert.triggerCount > 0 && (
+                        <span>
+                          Triggered {alert.triggerCount} time{alert.triggerCount !== 1 ? 's' : ''}
+                        </span>
+                      )}
+                      {alert.lastTriggered && (
+                        <span className="hidden sm:inline">
+                          Last: {alert.lastTriggered.toLocaleString()}
+                        </span>
+                      )}
+                      {alert.snoozedUntil && new Date() < alert.snoozedUntil && (
+                        <span className="text-yellow-400">
+                          😴 Snoozed until {alert.snoozedUntil.toLocaleTimeString()}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <span className={`text-sm font-medium ${getAlertStatusColor(alert)}`}>
-                  {getAlertStatusText(alert)}
-                </span>
-                {alert.enabled && (
-                  <>
-                    {alert.snoozedUntil && new Date() < alert.snoozedUntil ? (
-                      <button
-                        onClick={() => handleUnsnoozeAlert(alert.id)}
-                        className="px-2 py-1 text-xs bg-orange-600 hover:bg-orange-700 text-white rounded transition-colors"
-                        title="Cancel snooze and reactivate alert"
-                      >
-                        🔔 Unsnooze
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => handleSnoozeAlert(alert.id)}
-                        className="px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
-                        title="Snooze for 5 minutes"
-                      >
-                        😴 5min
-                      </button>
+                
+                {/* Action Buttons Area */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 flex-shrink-0">
+                  {/* Status Badge */}
+                  <div className="flex justify-center sm:justify-start">
+                    <span className={`text-sm font-medium px-2 py-1 rounded text-center ${getAlertStatusColor(alert)}`}>
+                      {getAlertStatusText(alert)}
+                    </span>
+                  </div>
+                  
+                  {/* Action Buttons */}
+                  <div className="flex flex-row gap-2 justify-center sm:justify-end">
+                    {alert.enabled && (
+                      <>
+                        {alert.snoozedUntil && new Date() < alert.snoozedUntil ? (
+                          <button
+                            onClick={() => handleUnsnoozeAlert(alert.id)}
+                            className="px-3 py-2 text-sm bg-orange-600 hover:bg-orange-700 text-white rounded transition-colors min-h-[36px] flex-1 sm:flex-none"
+                            title="Cancel snooze and reactivate alert"
+                          >
+                            🔔 Unsnooze
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleSnoozeAlert(alert.id)}
+                            className="px-3 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors min-h-[36px] flex-1 sm:flex-none"
+                            title="Snooze for 5 minutes"
+                          >
+                            😴 5min
+                          </button>
+                        )}
+                      </>
                     )}
-                  </>
-                )}
-                <button
-                  onClick={() => handleToggleAlert(alert.id)}
-                  className={`px-3 py-1 text-sm rounded transition-colors ${
-                    alert.enabled 
-                      ? 'bg-yellow-600 hover:bg-yellow-700 text-white' 
-                      : 'bg-green-600 hover:bg-green-700 text-white'
-                  }`}
-                >
-                  {alert.enabled ? 'Disable' : 'Enable'}
-                </button>
-                <button
-                  onClick={() => handleRemoveAlert(alert.id)}
-                  className="px-3 py-1 text-sm bg-red-600 hover:bg-red-700 text-white rounded transition-colors"
-                >
-                  Remove
-                </button>
+                    <button
+                      onClick={() => handleToggleAlert(alert.id)}
+                      className={`px-3 py-2 text-sm rounded transition-colors min-h-[36px] flex-1 sm:flex-none ${
+                        alert.enabled 
+                          ? 'bg-yellow-600 hover:bg-yellow-700 text-white' 
+                          : 'bg-green-600 hover:bg-green-700 text-white'
+                      }`}
+                    >
+                      {alert.enabled ? 'Disable' : 'Enable'}
+                    </button>
+                    <button
+                      onClick={() => handleRemoveAlert(alert.id)}
+                      className="px-3 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded transition-colors min-h-[36px] flex-1 sm:flex-none"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           ))}

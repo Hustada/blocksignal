@@ -46,7 +46,7 @@ class AlertManager {
   private isTabVisible: boolean = true;
   private originalTitle: string = '';
   private titleFlashInterval?: NodeJS.Timeout;
-  private currentFavicon: string = '/favicon.ico';
+  private currentFavicon: string = '/images/new-favicon1.png';
   private notificationCount: number = 0;
   private notificationHistory: Date[] = [];
 
@@ -217,7 +217,7 @@ class AlertManager {
     if (typeof window !== 'undefined' && this.config.enableNotifications && this.notificationPermission === 'granted') {
       const notificationOptions: NotificationOptions = {
         body: message,
-        icon: '/notification-icon.svg',
+        icon: '/images/new-favicon1.png',
         badge: '/notification-badge.svg',
         tag: alert.triggerCount > 1 ? `${alert.id}-${alert.triggerCount}` : alert.id, // Unique tag for repeat triggers
         requireInteraction: this.config.persistentNotifications && !this.isTabVisible,

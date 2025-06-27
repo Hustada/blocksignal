@@ -9,6 +9,11 @@ export const metadata: Metadata = {
   description: 'A sleek, low-latency crypto monitoring dashboard with real-time alerts and multi-exchange support.',
   keywords: ['crypto', 'bitcoin', 'price', 'monitor', 'dashboard', 'alerts'],
   authors: [{ name: 'BlockSignal' }],
+  icons: {
+    icon: '/images/new-favicon1.png',
+    shortcut: '/images/new-favicon1.png',
+    apple: '/images/new-favicon1.png',
+  },
 }
 
 export function generateViewport() {
