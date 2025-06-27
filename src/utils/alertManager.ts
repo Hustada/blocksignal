@@ -428,6 +428,16 @@ class AlertManager {
     }
   }
 
+  // Unsnooze functionality
+  unsnoozeAlert(alertId: string): void {
+    const alert = this.alerts.find(a => a.id === alertId);
+    if (alert && alert.snoozedUntil) {
+      alert.snoozedUntil = undefined;
+      this.saveAlertsToStorage();
+      console.log(`🔔 Unsnoozed ${alert.name}`);
+    }
+  }
+
   // Notification rate limiting
   private canSendNotification(): boolean {
     const now = new Date();

@@ -89,6 +89,11 @@ export function AlertBar({ currentPrice }: AlertBarProps) {
     setAlerts(alertManager.getAlerts());
   };
 
+  const handleUnsnoozeAlert = (id: string) => {
+    alertManager.unsnoozeAlert(id);
+    setAlerts(alertManager.getAlerts());
+  };
+
   const handleResetTriggered = () => {
     alertManager.resetTriggeredAlerts();
     setAlerts(alertManager.getAlerts());
@@ -276,14 +281,26 @@ export function AlertBar({ currentPrice }: AlertBarProps) {
                 <span className={`text-sm font-medium ${getAlertStatusColor(alert)}`}>
                   {getAlertStatusText(alert)}
                 </span>
-                {alert.enabled && !(alert.snoozedUntil && new Date() < alert.snoozedUntil) && (
-                  <button
-                    onClick={() => handleSnoozeAlert(alert.id)}
-                    className="px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
-                    title="Snooze for 5 minutes"
-                  >
-                    😴 5min
-                  </button>
+                {alert.enabled && (
+                  <>
+                    {alert.snoozedUntil && new Date() < alert.snoozedUntil ? (
+                      <button
+                        onClick={() => handleUnsnoozeAlert(alert.id)}
+                        className="px-2 py-1 text-xs bg-orange-600 hover:bg-orange-700 text-white rounded transition-colors"
+                        title="Cancel snooze and reactivate alert"
+                      >
+                        🔔 Unsnooze
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleSnoozeAlert(alert.id)}
+                        className="px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
+                        title="Snooze for 5 minutes"
+                      >
+                        😴 5min
+                      </button>
+                    )}
+                  </>
                 )}
                 <button
                   onClick={() => handleToggleAlert(alert.id)}
