@@ -58,14 +58,14 @@ export default function Dashboard() {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 xl:grid-cols-5 1.5xl:grid-cols-1 gap-8">
           {/* Price Ticker - Takes up more space on larger screens */}
-          <div className="xl:col-span-2">
+          <div className="xl:col-span-3 1.5xl:col-span-1">
             <PriceTicker onPriceChange={handlePriceChange} />
           </div>
           
           {/* Alert Bar */}
-          <div className="xl:col-span-1">
+          <div className="xl:col-span-2 1.5xl:col-span-1">
             <AlertBar currentPrice={currentPrice} />
           </div>
         </div>
