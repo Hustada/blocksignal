@@ -8,15 +8,9 @@ A real-time Bitcoin price monitoring dashboard with custom alerts and live WebSo
 
 <div align="center">
 
-> **Live Dashboard Features:**
-> - Real-time Bitcoin price with green/red price movement indicators
-> - Live WebSocket connection status
-> - 24h High, Low, Volume, and Change statistics  
-> - Custom price alerts with desktop notifications
-> - Clean, responsive design with Space Grotesk typography
-> - Auto-reconnection with connection status indicators
+![BlockSignal Dashboard Screenshot](./public/Screenshot%202025-06-27%20at%2011.57.51%20AM.png)
 
-*Screenshot coming soon - see the live dashboard at [http://localhost:3000](http://localhost:3000) after running `npm run dev`*
+*Real-time Bitcoin price monitoring with live WebSocket data, 24h statistics, and custom price alerts*
 
 </div>
 
