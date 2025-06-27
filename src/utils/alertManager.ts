@@ -205,7 +205,7 @@ class AlertManager {
     const triggerText = alert.triggerCount > 1 ? ` (${alert.triggerCount}${this.getOrdinalSuffix(alert.triggerCount)} trigger)` : '';
     const autoResetText = alert.autoReset ? ' 🔄' : '';
     
-    const message = `${alert.name}${triggerText}: BTC is ${alert.type} $${alert.threshold.toLocaleString()}!\nCurrent: $${currentPrice.toLocaleString()} ${trend} (${priceChangeNum >= 0 ? '+' : ''}${priceChange}%)`;
+    const message = `${alert.name}${triggerText}: BTC is ${alert.type} $${alert.threshold.toLocaleString()}!\nCurrent: $${currentPrice.toLocaleString()} ${trend} (${priceChangeNum >= 0 ? '+' : ''}${priceChange}%)\n\n💡 Click to view dashboard ${alert.autoReset ? '• Snooze available' : ''}`;
     const shortMessage = `${alert.name}${autoResetText}: BTC ${alert.type} $${alert.threshold.toLocaleString()}`;
     
     // Start title flashing for background tabs
@@ -223,33 +223,19 @@ class AlertManager {
         requireInteraction: this.config.persistentNotifications && !this.isTabVisible,
       };
 
-      // Add action buttons if supported and enabled
-      if (this.config.enableNotificationActions && 'actions' in Notification.prototype) {
-        (notificationOptions as any).actions = [
-          { action: 'view', title: '📊 View Dashboard', icon: '/notification-icon.svg' },
-          { action: 'snooze', title: `⏰ Snooze ${this.config.defaultSnoozeMinutes}min`, icon: '/notification-badge.svg' },
-        ];
-        
-        if (!alert.autoReset) {
-          (notificationOptions as any).actions.push({ action: 'disable', title: '🔕 Disable Alert', icon: '/notification-badge.svg' });
-        }
-      }
+      // Note: Action buttons require Service Worker, so we'll skip them for now
+      // Future enhancement: Implement Service Worker for rich notifications
+      // For now, we'll use enhanced notification content instead
 
       const notification = new Notification('🚨 BlockSignal Alert', notificationOptions);
       
-      // Handle notification interactions
+      // Handle notification click to focus dashboard
       notification.onclick = () => {
-        this.handleNotificationAction('view', alert.id);
+        if (typeof window !== 'undefined') {
+          window.focus();
+        }
         notification.close();
       };
-
-      // Handle action button clicks (if supported)
-      if ('addEventListener' in notification) {
-        notification.addEventListener('notificationclick', (event: any) => {
-          this.handleNotificationAction(event.action || 'view', alert.id);
-          notification.close();
-        });
-      }
       
       this.trackNotification();
     }
@@ -467,27 +453,8 @@ class AlertManager {
     return 'th';
   }
 
-  // Handle notification action clicks
-  private handleNotificationAction(action: string, alertId: string): void {
-    switch (action) {
-      case 'view':
-        if (typeof window !== 'undefined') {
-          window.focus();
-        }
-        break;
-      case 'snooze':
-        this.snoozeAlert(alertId);
-        break;
-      case 'disable':
-        const alert = this.alerts.find(a => a.id === alertId);
-        if (alert) {
-          alert.enabled = false;
-          this.saveAlertsToStorage();
-          console.log(`🔕 Disabled alert: ${alert.name}`);
-        }
-        break;
-    }
-  }
+  // Note: Action button handling removed - requires Service Worker implementation
+  // Future enhancement: Implement Service Worker for rich notification actions
 
   private saveAlertsToStorage(): void {
     if (typeof window === 'undefined') return;
